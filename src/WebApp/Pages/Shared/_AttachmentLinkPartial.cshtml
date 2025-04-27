@@ -1,0 +1,22 @@
+﻿@using Cts.WebApp.Pages.Shared.DisplayTemplates
+@using Cts.WebApp.Platform.Constants
+@model Cts.AppServices.Attachments.Dto.AttachmentViewDto
+@{
+    var imgPath = Model.IsForPublic ? "Attachment" : "../Attachment";
+}
+@if (Model.IsImage)
+{
+    <a asp-page="Attachment" asp-route-id="@Model.Id.ToString()" asp-route-fileName="@Model.FileName" target="_blank"
+       class="text-decoration-hover rounded d-block no-external-link" data-fancybox="gallery" data-caption="@Model.FileName">
+        <img src="@imgPath/@Model.Id.ToString()/@Uri.EscapeDataString(Model.FileName)?thumbnail=true" class="img-thumbnail rounded me-2"
+             width="@GlobalConstants.ThumbnailSize.ToString()" height="@GlobalConstants.ThumbnailSize.ToString()" alt="" />
+        @Model.FileName
+    </a>
+}
+else
+{
+    <a asp-page="Attachment" asp-route-id="@Model.Id.ToString()" asp-route-fileName="@Model.FileName" target="_blank"
+       class="text-decoration-hover rounded d-block p-2 no-external-link">
+        @Html.DisplayFor(dto => dto.FileExtension, DisplayTemplate.FileTypeIcon) @Model.FileName
+    </a>
+}

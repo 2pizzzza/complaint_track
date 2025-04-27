@@ -1,0 +1,527 @@
+@page "{id:int}"
+@using Cts.AppServices.Attachments
+@using Cts.AppServices.Complaints.Permissions
+@using Cts.Domain.Data
+@using Cts.WebApp.Pages.Shared.DisplayTemplates
+@using Cts.WebApp.Pages.Shared.EditorTemplates
+@using GaEpd.AppLibrary.Extensions
+@model DetailsModel
+@{
+    ViewData["Title"] = $"Complaint ID {Model.Id}";
+}
+
+<div class="container-full">
+    <div class="row justify-content-between align-items-baseline g-0 my-1">
+        <div class="col">
+            <h1>@ViewData["Title"]</h1>
+        </div>
+        <div class="col-auto d-print-none ms-2">
+            <a asp-page="/Complaint" asp-route-id="@Model.Id" 
+               class="link-underline link-underline-opacity-25 link-underline-opacity-100-hover link-offset-2">
+                <svg class="bi me-2">
+                    <use href="@Url.Content("~/images/app-icons.svg")#app-icon-people-fill"></use>
+                </svg>View public copy
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (Model.ComplaintView.IsDeleted && Model.UserCan[ComplaintOperation.ManageDeletions])
+{
+    <div class="callout callout-danger mb-3">
+        <div class="container-full">
+            <div class="row justify-content-between align-items-end g-0 my-1">
+                <div class="col">
+                    <h4 class="text-danger-emphasis">Deleted Complaint</h4>
+                </div>
+                <div class="col-auto d-print-none ms-2">
+                    <a asp-page="Restore" asp-route-id="@Model.Id" class="btn btn-outline-warning">Restore deleted
+                        complaint</a>
+                </div>
+            </div>
+        </div>
+        <p>
+            Deleted by @Html.DisplayFor(model => model.ComplaintView.DeletedBy, DisplayTemplate.NameOrPlaceholder)
+            on @Html.DisplayFor(model => model.ComplaintView.DeletedAt, DisplayTemplate.LongDateTimeOrNotEntered)
+        </p>
+        <h5>Comments</h5>
+        <p class="text-break text-pre-line">@Html.DisplayFor(model => model.ComplaintView.DeleteComments, DisplayTemplate.StringOrPlaceholder)</p>
+    </div>
+}
+
+@if (Model.UserCan[ComplaintOperation.ViewAsOwner])
+{
+    var calloutClass = Model.UserCan[ComplaintOperation.Accept] ? "callout-info" : "";
+    <div class="callout @calloutClass">
+        <div class="row justify-content-between align-items-center g-0">
+            <div class="col">
+                This Complaint was assigned to you on @Html.DisplayFor(model => model.ComplaintView.CurrentOwnerAssignedDate, DisplayTemplate.LongDateTimeOrNotEntered).
+                @if (Model.ComplaintView.CurrentOwnerAcceptedDate != null)
+                {
+                    @:<br />You accepted it on @Html.DisplayFor(model => model.ComplaintView.CurrentOwnerAcceptedDate, DisplayTemplate.LongDateTimeOrNotEntered).
+                }
+            </div>
+            @if (Model.UserCan[ComplaintOperation.Accept])
+            {
+                <div class="col-auto d-print-none ms-3">
+                    <form asp-page-handler="Accept" class="d-inline-block">
+                        <button type="submit" class="btn btn-primary me-2">Accept</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (!Model.ComplaintView.IsDeleted)
+{
+    <div class="d-print-none mb-3">
+        @if (Model.UserCan[ComplaintOperation.EditDetails])
+        {
+            <a asp-page="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">Edit details</a>
+        }
+        @if (Model.UserCan[ComplaintOperation.ManageDeletions])
+        {
+            <a asp-page="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger me-2">Delete</a>
+        }
+    </div>
+}
+
+<div class="container-full">
+<div class="row gx-md-3">
+<div class="col-md-3 mb-3 mb-md-0 d-print-none">
+    <div class="sticky-md-top" id="toc-container">
+        <div class="pb-2 d-grid d-md-none">
+            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#toc" aria-expanded="false" aria-controls="toc">
+                On this Page
+            </button>
+        </div>
+        <h3 class="h5 d-none d-md-block no-anchor">On this Page</h3>
+        <div class="list-group list-group-flush collapse d-md-block" id="toc"></div>
+    </div>
+</div>
+
+<div class="col-md-9 order-md-first">
+
+<h2 id="status">Status: <em class="text-info-emphasis">@Model.ComplaintView.Status.GetDisplayName()</em></h2>
+
+<div class="d-print-none mb-2">
+    @if (Model.UserCan[ComplaintOperation.Review])
+    {
+        <a asp-page="Approve" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">Close Complaint
+            (approved)</a>
+        <a asp-page="Return" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">Return to staff (not
+            approved)</a>
+    }
+    @if (Model.UserCan[ComplaintOperation.Assign])
+    {
+        <a asp-page="Assign" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">Assign</a>
+    }
+    @if (Model.UserCan[ComplaintOperation.RequestReview])
+    {
+        <a asp-page="RequestReview" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">Submit for review</a>
+    }
+    @if (Model.UserCan[ComplaintOperation.Reassign])
+    {
+        <a asp-page="Assign" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">Transfer/reassign</a>
+    }
+    @if (Model.UserCan[ComplaintOperation.Reopen])
+    {
+        <a asp-page="Reopen" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">Reopen</a>
+    }
+</div>
+
+<div class="container">
+    <dl class="row">
+        @if (Model.ComplaintView.ComplaintClosed)
+        {
+            <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ReviewedBy)</dt>
+            <dd class="col-sm-8 col-lg-9">
+                @Html.DisplayFor(model => model.ComplaintView.ReviewedBy, DisplayTemplate.NameOrPlaceholder)
+                on @Html.DisplayFor(model => model.ComplaintView.ComplaintClosedDate, DisplayTemplate.LongDateTimeOrNotEntered)
+            </dd>
+            <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ReviewComments)</dt>
+            <dd class="col-sm-8 col-lg-9 text-break text-pre-line">@Model.ComplaintView.ReviewComments</dd>
+        }
+
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CurrentOffice)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CurrentOfficeName, DisplayTemplate.StringOrPlaceholder, new { Placeholder = "[Unassigned]" })</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CurrentOwner)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CurrentOwner, DisplayTemplate.NameOrPlaceholder, new { Placeholder = "[Unassigned]" })</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ReceivedDate)</dt>
+        <dd class="col-sm-8 col-lg-9">
+            @Html.DisplayFor(model => model.ComplaintView.ReceivedDate, DisplayTemplate.LongDateTime)
+        </dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CurrentOwnerAssignedDate)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CurrentOwnerAssignedDate, DisplayTemplate.LongDateTimeOrNotEntered)</dd>
+    </dl>
+</div>
+
+<h2 class="h3">Nature of Complaint</h2>
+
+<p class="container text-break text-pre-line">@Html.DisplayFor(_ => Model.ComplaintView.ComplaintNature, DisplayTemplate.StringOrPlaceholder)</p>
+
+<div class="container">
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.PrimaryConcernName)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.PrimaryConcernName, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SecondaryConcernName)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SecondaryConcernName, DisplayTemplate.StringOrPlaceholder)</dd>
+    </dl>
+</div>
+
+<h2 class="h3">Caller</h2>
+
+<div class="container">
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CallerName)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CallerName, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CallerRepresents)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CallerRepresents, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CallerAddress)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CallerAddress)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CallerPhoneNumber)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CallerPhoneNumber)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CallerSecondaryPhoneNumber)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CallerSecondaryPhoneNumber)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CallerTertiaryPhoneNumber)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CallerTertiaryPhoneNumber)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.CallerEmail)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.CallerEmail, DisplayTemplate.StringOrPlaceholder)</dd>
+    </dl>
+</div>
+
+<h2 class="h3">Complaint Location</h2>
+
+<div class="container">
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ComplaintLocation)</dt>
+        <dd class="col-sm-8 col-lg-9 text-break text-pre-line">@Html.DisplayFor(model => model.ComplaintView.ComplaintLocation, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ComplaintDirections)</dt>
+        <dd class="col-sm-8 col-lg-9 text-break text-pre-line">@Html.DisplayFor(model => model.ComplaintView.ComplaintDirections, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ComplaintCity)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.ComplaintCity, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ComplaintCounty)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.ComplaintCounty, DisplayTemplate.County)</dd>
+    </dl>
+</div>
+
+<h2 class="h3">Source</h2>
+
+<div class="container">
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourceFacilityName)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourceFacilityName, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourceFacilityIdNumber)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourceFacilityIdNumber, DisplayTemplate.StringOrPlaceholder)</dd>
+    </dl>
+</div>
+
+<h2 class="h3">Source Contact</h2>
+
+<div class="container">
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourceContactName)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourceContactName, DisplayTemplate.StringOrPlaceholder)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourceAddress)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourceAddress)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourcePhoneNumber)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourcePhoneNumber)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourceSecondaryPhoneNumber)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourceSecondaryPhoneNumber)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourceTertiaryPhoneNumber)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourceTertiaryPhoneNumber)</dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.SourceEmail)</dt>
+        <dd class="col-sm-8 col-lg-9">@Html.DisplayFor(model => model.ComplaintView.SourceEmail, DisplayTemplate.StringOrPlaceholder)</dd>
+    </dl>
+</div>
+
+<h2 class="h3">Actions</h2>
+
+@if (!Model.ViewableActions)
+{
+    <p>
+        <em>None.</em>
+    </p>
+}
+
+@if (Model.UserCan[ComplaintOperation.EditActions])
+{
+    <div class="container bg-light-subtle border border-primary-subtle rounded-1 my-3 py-2 d-print-none">
+        <h3 id="new-action" class="h5">Add An Action Item</h3>
+
+        <form method="post" asp-page-handler="NewAction" asp-fragment="new-action">
+            @Html.DisplayFor(_ => Model.ValidatingSection, DisplayTemplate.ValidationSummaryConditional,
+                new { ValidatingSection = nameof(DetailsModel.OnPostNewActionAsync) })
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    @Html.EditorFor(model => model.NewAction.ActionDate, EditorTemplate.InputDateOnlyNullable)
+                </div>
+                <div class="col-md-8 mb-3">
+                    @Html.EditorFor(model => model.NewAction.Investigator, EditorTemplate.Input)
+                </div>
+            </div>
+            <div class="row">
+                <div class="mb-3">
+                    @Html.EditorFor(model => model.NewAction.ActionTypeId, EditorTemplate.Select, new { Items = Model.ActionItemTypeSelectList })
+                </div>
+            </div>
+            <div class="row">
+                <div class="mb-3">
+                    @Html.EditorFor(model => model.NewAction.Comments, EditorTemplate.Textarea, new { Rows = 3 })
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary col-6 col-sm-4 col-lg-3 mb-1 me-2">Save Action</button>
+            <div class="text-danger-emphasis">* denotes a required field</div>
+            <input asp-for="NewAction.ComplaintId" type="hidden" />
+        </form>
+    </div>
+}
+
+@if (Model.ViewableActions)
+{
+    <div class="row row-cols-1 g-3 mb-3">
+        @foreach (var action in Model.ComplaintView.Actions.Where(action => !action.IsDeleted || Model.UserCan[ComplaintOperation.ViewDeletedActions]))
+        {
+            <div class="col">
+                <div class="card @(action.Id == Model.HighlightId ? "border-success" : "") @(action.IsDeleted ? "bg-secondary-subtle" : "")">
+                    <div class="card-header">
+                        <div class="container-full">
+                            <div class="row justify-content-between align-items-start g-0 my-1">
+                                <div class="col">
+                                    <h3 id="@action.Id.ToString()" class="h5 card-title">
+                                        @if (action.IsDeleted)
+                                        {
+                                            <em class="text-body-secondary">(Deleted Action)</em>
+                                        }
+                                        @action.ActionTypeName
+                                    </h3>
+                                    <h4 class="h5 card-subtitle text-body-secondary">
+                                        @Html.DisplayFor(_ => action.ActionDate, DisplayTemplate.DateOnlyOrNotEntered)
+                                        @if (!string.IsNullOrWhiteSpace(action.Investigator))
+                                        {
+                                            @:by @Html.DisplayFor(_ => action.Investigator)
+                                        }
+                                    </h4>
+                                </div>
+                                @if (Model.UserCan[ComplaintOperation.EditActions])
+                                {
+                                    <div class="col-auto d-print-none ms-2">
+                                        @if (!action.IsDeleted)
+                                        {
+                                            <a asp-page="../ComplaintActions/Edit" asp-route-actionId="@action.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                                            <a asp-page="../ComplaintActions/Delete" asp-route-actionId="@action.Id" class="btn btn-sm btn-outline-danger ms-1">Delete</a>
+                                        }
+                                        else
+                                        {
+                                            <a asp-page="../ComplaintActions/Restore" asp-route-actionId="@action.Id" class="btn btn-sm btn-outline-warning ms-1">Restore</a>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body ">
+                        <div class="text-break text-pre-line">@Html.DisplayFor(_ => action.Comments, DisplayTemplate.StringOrPlaceholder, new { Placeholder = "none" })</div>
+                    </div>
+                    @if (action.EnteredBy is not null || action.EnteredDate is not null)
+                    {
+                        <small class="card-footer text-body-secondary">
+                            Entered
+                            @if (action.EnteredBy is not null)
+                            {
+                                <text>by @action.EnteredBy.Name</text>
+                            }
+                            @if (action.EnteredDate is not null)
+                            {
+                                <text> on @Html.DisplayFor(_ => action.EnteredDate.Value, DisplayTemplate.ShortDate)</text>
+                            }
+                        </small>
+                    }
+                    @if (action.DeletedBy is not null || action.DeletedAt is not null)
+                    {
+                        <small class="card-footer text-body-secondary">
+                            Deleted
+                            @if (action.DeletedBy is not null)
+                            {
+                                <text>by @action.DeletedBy.Name</text>
+                            }
+                            @if (action.DeletedAt is not null)
+                            {
+                                <text> on @Html.DisplayFor(_ => action.DeletedAt.Value, DisplayTemplate.ShortDate)</text>
+                            }
+                        </small>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<h2 class="h3" id="attachments">Attachments</h2>
+
+@if (Model.ComplaintView.Attachments is { Count: > 0 })
+{
+    <table class="table table-hover table-borderless align-middle" aria-label="File attachments">
+        <thead>
+        <tr>
+            <th scope="col">File</th>
+            <th scope="col">Size</th>
+            <th scope="col">Uploaded By</th>
+            @if (Model.UserCan[ComplaintOperation.EditAttachments])
+            {
+                <th scope="col">Actions</th>
+            }
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var attachment in Model.ComplaintView.Attachments)
+        {
+            <tr>
+                <td>
+                    <partial name="_AttachmentLinkPartial" model="attachment" />
+                </td>
+                <td>@Html.DisplayFor(_ => attachment.Size, DisplayTemplate.FileSize)</td>
+                <td>
+                    @Html.DisplayFor(_ => attachment.UploadedBy, DisplayTemplate.NameOrPlaceholder) <br />
+                    @Html.DisplayFor(_ => attachment.UploadedDate, DisplayTemplate.ShortDateTime)
+                </td>
+                @if (Model.UserCan[ComplaintOperation.EditAttachments])
+                {
+                    <td>
+                        <a asp-page="Attachment/Delete" asp-route-attachmentId="@attachment.Id" class="btn btn-sm btn-outline-danger">Delete</a>
+                    </td>
+                }
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>
+        <em>None.</em>
+    </p>
+}
+
+@if (Model.UserCan[ComplaintOperation.EditAttachments])
+{
+    <div class="container bg-light-subtle border border-primary-subtle rounded-1 my-3 py-2 d-print-none">
+        @if (Model.ComplaintView.ComplaintClosed)
+        {
+            <p class="callout callout-danger">Be careful! This complaint is closed.</p>
+        }
+        <h3 class="h5">Upload Attachments</h3>
+        <form method="post" asp-page-handler="UploadFiles" asp-fragment="upload-attachments"
+              enctype="multipart/form-data">
+            @Html.DisplayFor(_ => Model.ValidatingSection, DisplayTemplate.ValidationSummaryConditional,
+                new { ValidatingSection = nameof(DetailsModel.OnPostUploadFilesAsync) })
+            <div class="drop-area d-flex flex-column justify-content-center align-items-center p-3">
+                <div>
+                    <p>Drag & drop files here or click to select.</p>
+                    <input class="fileElem d-none" type="file" asp-for="FileUploads.Files" multiple
+                           accept="@FileTypes.FileTypesAcceptString" />
+                    <button class="btn btn-outline-primary select-files-btn">Select Files</button>
+                    <div class="upload-ready text-success"></div>
+                </div>
+            </div>
+            <p class="col-lg-12 mt-2">
+                Up to ten files may be uploaded at a time. Supported file types are images, documents, and spreadsheets.
+                All files must comply with the <a href="~/static/Complaint-Attachments-Policy.pdf" target="_blank">EPD
+                    Complaint Attachments Policy (<abbr>PDF</abbr>)</a>.
+            </p>
+            <div>
+                <button id="uploadButton" type="submit" class="btn btn-primary">Upload selected files</button>
+                <div class="text-success mt-2">@(Model.UploadSuccess ? "Files uploaded successfully." : "")</div>
+            </div>
+        </form>
+    </div>
+}
+
+<h2 class="h3">Audit History</h2>
+
+<div class="container">
+    <dl class="row small">
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.ReceivedBy)</dt>
+        <dd class="col-sm-8 col-lg-9">
+            @Html.DisplayFor(model => model.ComplaintView.ReceivedBy, DisplayTemplate.NameOrPlaceholder)
+            on @Html.DisplayFor(model => model.ComplaintView.ReceivedDate, DisplayTemplate.LongDateTime)
+        </dd>
+        <dt class="col-sm-4 col-lg-3">@Html.DisplayNameFor(model => model.ComplaintView.EnteredBy)</dt>
+        <dd class="col-sm-8 col-lg-9">
+            @Html.DisplayFor(model => model.ComplaintView.EnteredBy, DisplayTemplate.NameOrPlaceholder)
+            on @Html.DisplayFor(model => model.ComplaintView.EnteredDate, DisplayTemplate.LongDateTime)
+        </dd>
+        @if (Model.ComplaintView.ComplaintClosed)
+        {
+            <dt class="col-sm-4 col-lg-3">Reviewed and Closed By</dt>
+            <dd class="col-sm-8 col-lg-9">
+                @Html.DisplayFor(model => model.ComplaintView.ReviewedBy, DisplayTemplate.NameOrPlaceholder)
+                on @Html.DisplayFor(model => model.ComplaintView.ComplaintClosedDate, DisplayTemplate.LongDateTime)
+            </dd>
+        }
+    </dl>
+</div>
+
+@if (Model.ComplaintView.ComplaintTransitions is { Count: > 0 })
+{
+    <details>
+        <summary class="h5 text-secondary mb-2">Show full audit history</summary>
+        <div class="table-responsive-md">
+            @if (Model.ShowHistoryNotification)
+            {
+                <p>
+                    <small>Audit history prior to @Html.DisplayFor(_ => DomainConstants.OracleMigrationDate, DisplayTemplate.LongDate) may be incomplete.</small>
+                </p>
+            }
+            <table class="table table-sm table-hover small align-top" aria-label="Audit history">
+                <thead>
+                <tr>
+                    <th scope="col">Action&nbsp;Date</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Committed&nbsp;By</th>
+                    <th scope="col">Transferred&nbsp;To</th>
+                    <th scope="col">Comment</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model.ComplaintView.ComplaintTransitions)
+                {
+                    <tr>
+                        <td>@Html.DisplayFor(_ => item.CommittedDate, DisplayTemplate.ShortDateTimeNoBreak)</td>
+                        <td>@item.TransitionType.GetDisplayName()</td>
+                        <td>@Html.DisplayFor(_ => item.CommittedByUser, DisplayTemplate.NameOrPlaceholder)</td>
+                        <td>
+                            @Html.DisplayFor(_ => item.TransferredToUser, DisplayTemplate.NameOrBlank)
+                            @if (item is { TransferredToUser: not null, TransferredToOffice: not null })
+                            {
+                                <br />
+                            }
+                            @Html.DisplayFor(_ => item.TransferredToOffice, DisplayTemplate.NameOrBlank)
+                        </td>
+                        <td class="text-break text-pre-line">@Html.DisplayFor(_ => item.Comment)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </details>
+}
+</div>
+</div>
+</div>
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/fileUpload.js"></script>
+    <script src="~/js/table-of-contents.js" defer></script>
+    <partial name="_FancyboxScriptsPartial" />
+}
+
+@section Styles
+{
+    <partial name="_FancyboxStylesPartial" />
+}

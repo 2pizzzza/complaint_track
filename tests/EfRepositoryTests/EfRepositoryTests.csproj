@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <PackageReference Include="EfCore.TestSupport" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\EfRepository\EfRepository.csproj" />
+        <ProjectReference Include="..\..\src\TestData\TestData.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <Target Name="CopyTestSettings" AfterTargets="AfterBuild">
+        <Copy SourceFiles="appsettings.json" DestinationFolder="$(BaseProjectArtifactPath)" />
+    </Target>
+</Project>

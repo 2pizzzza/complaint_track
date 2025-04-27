@@ -1,0 +1,59 @@
+﻿@page
+@model DashboardIndexModel
+@{
+    ViewData["Title"] = "Staff Dashboard";
+}
+<vc:notifications />
+
+@if (Model.IsStaff)
+{
+    <div class="p-3 rounded-3 bg-light-subtle border mt-3 mb-3 col">
+        <form method="post" class="row row-cols-sm-auto align-items-center" role="search">
+            <div class="col-12 mb-2 mb-sm-0">
+                <label for="FindId">Find by Complaint ID</label>
+            </div>
+            <div class="col-12">
+                <div class="input-group">
+                    <input id="FindId" asp-for="FindId" class="form-control" type="search" placeholder="Complaint ID" aria-label="Search" />
+                    <button class="btn btn-primary" type="submit">View</button>
+                </div>
+            </div>
+            <div class="col-12 mt-2 mt-sm-0">
+                <span asp-validation-for="FindId" class="text-danger-emphasis"></span>
+            </div>
+        </form>
+    </div>
+
+    <div class="row">
+        <section class="col-md mb-3">
+            <h1 class="h2 text-nowrap">@ViewData["Title"]</h1>
+            <partial name="_DashboardCardPartial" model="Model.MyNewComplaints" />
+            <partial name="_DashboardCardPartial" model="Model.MyOpenComplaints" />
+        </section>
+
+        @if (Model.IsManager)
+        {
+            <section class="col-md mb-3">
+                <h1 class="h2 text-nowrap">Management Dashboard</h1>
+                <partial name="_DashboardCardPartial" model="Model.MgrReviewPending" />
+                <partial name="_DashboardCardPartial" model="Model.MgrUnassignedComplaints" />
+                <partial name="_DashboardCardPartial" model="Model.MgrUnacceptedComplaints" />
+            </section>
+        }
+
+        @if (Model.IsAssignor)
+        {
+            <section class="col-md mb-3">
+                <h1 class="h2 text-nowrap">Assignor Dashboard</h1>
+                @foreach (var card in Model.AssignorUnassignedComplaints)
+                {
+                    <partial name="_DashboardCardPartial" model="card" />
+                }
+            </section>
+        }
+    </div>
+}
+else
+{
+    <p>See your manager to discuss CTS access if needed.</p>
+}
