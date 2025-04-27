@@ -38,10 +38,6 @@
             <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
         </None>
     </ItemGroup>
-    <ItemGroup>
-        <None Include="../../CHANGELOG.md" />
-        <None Include="../../README.md" />
-    </ItemGroup>
 
     <ItemGroup>
         <MsDeploySkipRules Include="SkipAppSettings">
